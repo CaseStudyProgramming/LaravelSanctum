@@ -5,14 +5,15 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
-class AuthController extends Controller
+class AuthController extends BaseController
 {
     public function index()
     {
         $users = User::all();
-        return $this->sendResponse($users, message: 'Displayed all user data');
+        return $this->sendResponse($users, 'Displayen all users data');
     }
 
     public function register(Request $request)
@@ -20,18 +21,29 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required',
             'email' => 'required|email',
-            'password' => 'required',
+            'password' => 'required'
         ]);
 
-        if($validator->fails()){
+        if($validator->fails()) {
             return $this->sendError('Validation Error', $validator->errors());
         }
 
         $input = $request->all();
         $input['password'] = bcrypt($input['password']);
         $user = User::create($input);
-        $success['token'] = $user->createToken('MyAuthApp')->plainTextTooken;
+        $success['token'] = $user->createToken('MyAuthApp')->plainTextToken;
         $success['username'] = $user->name;
-        return $this->sendResponse($success, message: 'User registered successfully');
+        return $this->sendResponse($success, 'User registered successfully!');
+    }
+
+    public function login(Request $request)
+    {
+        if(Auth::attempt(['name' => $request->name, 'password' => $request->password])) {
+            $user = Auth::user();
+            $success['token'] = $user->createToken('MyAuthApp')->plainTextToken;
+            $success['username'] = $user->name;
+            return $this->sendResponse($success, 'User login successfully!');
+        }
+        return $this->sendError('Unauthorised', ['error' => 'Unauthorised']);
     }
 }
